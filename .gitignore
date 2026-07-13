@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 .DS_Store
 day-3/data/orders.db
+day-4/*/runs/

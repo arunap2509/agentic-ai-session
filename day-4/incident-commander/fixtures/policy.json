@@ -1,0 +1,7 @@
+{
+  "allowed_actions": ["restart", "rollback", "scale"],
+  "blast_radius_levels": ["single-instance", "single-service", "service-wide", "cross-service", "org-wide"],
+  "auto_approve_max_blast_radius": "single-service",
+  "confidence_floor": 0.8,
+  "target_scope_rule": "proposed target service must match the alert's originally affected service, unless the investigation independently found evidence implicating a different service"
+}

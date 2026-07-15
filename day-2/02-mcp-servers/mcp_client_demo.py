@@ -19,7 +19,7 @@ Run:
 import asyncio
 
 from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 from rich.console import Console
 from rich.panel import Panel
 
@@ -35,7 +35,7 @@ async def main() -> None:
     console.print(f"[bold]Client:[/bold] mcp ClientSession (this process)")
     console.print(f"[bold]Server:[/bold] {DEEPWIKI_URL} (runs remotely, over HTTP)\n")
 
-    async with streamablehttp_client(DEEPWIKI_URL) as (read, write, _):
+    async with streamable_http_client(DEEPWIKI_URL) as (read, write, _):
         async with ClientSession(read, write) as session:
             await session.initialize()
 

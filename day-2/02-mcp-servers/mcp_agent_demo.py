@@ -19,7 +19,7 @@ from pathlib import Path
 
 from google.genai import types
 from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 from rich.console import Console
 from rich.panel import Panel
 
@@ -55,7 +55,7 @@ PROMPT_5 = (
     "how you can tell, in simple terms."
 )
 
-PROMPT = PROMPT_1
+PROMPT = PROMPT_5
 
 
 async def main() -> None:
@@ -64,7 +64,7 @@ async def main() -> None:
     console.rule("MCP tools handed straight to the model")
     console.print(f"[bold cyan]User:[/bold cyan] {PROMPT}\n")
 
-    async with streamablehttp_client(DEEPWIKI_URL) as (read, write, _):
+    async with streamable_http_client(DEEPWIKI_URL) as (read, write, _):
         async with ClientSession(read, write) as session:
             await session.initialize()
 

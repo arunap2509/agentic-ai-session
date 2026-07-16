@@ -4,4 +4,5 @@ __pycache__/
 *.pyc
 .DS_Store
 day-3/data/orders.db
+day-3/coding-agent/workspace/
 day-4/*/runs/

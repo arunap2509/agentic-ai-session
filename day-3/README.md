@@ -1,9 +1,12 @@
 # Day 3 — Building Real Agents
 
-Two real, single-agent products, hands-on, deliberately contrasting in
-shape: `data-analyst-agent/` is depth (one agent, adaptive investigation),
-`ticker-triage-agent/` is breadth (a fixed pipeline applied to many
-events). Both built.
+Four hands-on projects, three of them real, single-agent products
+deliberately contrasting in shape: `data-analyst-agent/` is depth (one
+agent, adaptive investigation), `ticker-triage-agent/` is breadth (a fixed
+pipeline applied to many events), `coding-agent/` is side effects (tools
+that write files and execute code, not just read data). The fourth,
+`memory-classification-demo/`, is a standalone classification demo, not
+an agent contrast - see its own README for what it's for.
 
 ## Setup (do this once)
 
@@ -69,6 +72,36 @@ python ticker-triage-agent/triage_agent.py
 
 No seed step needed - its mock data (`data/ticker_data.py`) is plain
 Python, not a generated database.
+
+## What's in `coding-agent/`
+
+One file, `coding_agent.py` - a self-correcting agent: give it a task
+(write something from scratch, or fix a buggy file you point it at), and
+it writes code, runs it, reads its own stdout/stderr as the observation,
+and rewrites if it failed. See `coding-agent/README.md` for the one rule
+that keeps it from claiming success without actually verifying it, and for
+scenarios worth trying.
+
+```bash
+source .venv/bin/activate
+python coding-agent/coding_agent.py
+```
+
+## What's in `memory-classification-demo/`
+
+One file, `memory_classifier.py` - reads a conversation transcript and,
+in a single model call, extracts every distinct piece of information in
+it and classifies each into one of five memory types (in-context,
+key-value, vector, episodic, procedural) with a rationale. Classification
+only - nothing is stored anywhere. Three demo conversations live in
+`conversations/` so you can switch which one you're showing without
+touching code. See `memory-classification-demo/README.md` for the five
+category definitions and the answer key for each demo conversation.
+
+```bash
+source .venv/bin/activate
+python memory-classification-demo/memory_classifier.py
+```
 
 ## Notes for the live session
 

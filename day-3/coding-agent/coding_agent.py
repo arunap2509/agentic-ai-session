@@ -21,6 +21,13 @@ confined to workspace/ with a timeout and no stdin. Fine for this local
 demo, not a hardened sandbox - don't point it at untrusted input in
 production without a real container/VM boundary.
 
+The first task is detailed (task + optionally an existing buggy file);
+after it finishes, the process stays open and keeps prompting for further
+instructions, applied to the same file(s) in the same conversation -
+run_tool_loop already mutates and returns `contents` in place for exactly
+this, so a follow-up instruction is appended to the same history instead
+of starting a fresh, context-free conversation each time.
+
 run_bash is implemented (so the agent could `pip install` something it
 wants to import) but deliberately NOT included in the tools list run_agent
 passes to run_tool_loop - unlike run_python it isn't confined to
@@ -246,18 +253,40 @@ def build_prompt(task: str, existing_filename: str | None) -> str:
     return f"Write code from scratch for this task: {task}"
 
 
-def run_agent(task: str, existing_filename: str | None = None, max_steps: int = 10) -> str:
-    console.rule("Coding Agent")
-    _file_versions.clear()
-    if existing_filename:
-        existing_path = WORKSPACE / existing_filename
-        if existing_path.exists():
-            _file_versions[existing_filename] = existing_path.read_text()
+def build_followup_prompt(instruction: str) -> str:
+    return (
+        "New instruction for a follow-up change - apply it to the file(s) "
+        f"already in your workspace from earlier in this conversation, then "
+        f"re-verify with run_python the same way as before: {instruction}"
+    )
 
-    prompt = build_prompt(task, existing_filename)
+
+def run_agent(
+    task: str,
+    existing_filename: str | None = None,
+    max_steps: int = 10,
+    contents: list[types.Content] | None = None,
+) -> tuple[str, list[types.Content]]:
+    """Runs one task/instruction. Pass the `contents` returned from a prior
+    call back in to continue the same conversation (a follow-up instruction
+    applied to the same file, with full memory of what was already done)
+    instead of starting a fresh, context-free one."""
+    console.rule("Coding Agent")
+
+    if contents is None:
+        _file_versions.clear()
+        if existing_filename:
+            existing_path = WORKSPACE / existing_filename
+            if existing_path.exists():
+                _file_versions[existing_filename] = existing_path.read_text()
+        prompt = build_prompt(task, existing_filename)
+        contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
+    else:
+        prompt = build_followup_prompt(task)
+        contents.append(types.Content(role="user", parts=[types.Part(text=prompt)]))
+
     console.print(f"[bold cyan]Task:[/bold cyan] {prompt}\n")
 
-    contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
     result = run_tool_loop(
         contents,
         [write_file, read_file, run_python],  # run_bash exists but isn't wired in yet - see module docstring
@@ -268,12 +297,12 @@ def run_agent(task: str, existing_filename: str | None = None, max_steps: int = 
     )
     if result.exhausted:
         console.print(f"\n[bold red]Did not finish within {max_steps} steps.[/bold red]")
-        return f"exhausted after {max_steps} steps without a verified passing run"
+        return f"exhausted after {max_steps} steps without a verified passing run", contents
 
     attempts = sum(1 for obs in result.observations if obs["name"] == "run_python")
     console.print(f"\n[bold green]Result:[/bold green] {result.final_text}")
-    console.print(f"[dim]({attempts} run_python attempt(s) across this task)[/dim]")
-    return result.final_text
+    console.print(f"[dim]({attempts} run_python attempt(s) across this instruction)[/dim]")
+    return result.final_text, contents
 
 
 if __name__ == "__main__":
@@ -281,4 +310,11 @@ if __name__ == "__main__":
     if not task:
         console.print("[red]No task given, exiting.[/red]")
     else:
-        run_agent(task, existing_filename)
+        _, contents = run_agent(task, existing_filename)
+        while True:
+            followup = console.input(
+                "\n[bold cyan]Next instruction, applied to the same file(s) (blank to quit):[/bold cyan] "
+            ).strip()
+            if not followup:
+                break
+            _, contents = run_agent(followup, contents=contents)

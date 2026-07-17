@@ -31,11 +31,19 @@ writing plausible-looking broken code and just claiming success.
 python coding_agent.py
 ```
 
-Two prompts, in order:
+Two prompts for the first task, in order:
 1. **Existing buggy file to fix** (a path on your machine - blank to skip
    and write from scratch instead). If given, it's copied into
    `workspace/` under its own filename before the agent starts.
 2. **Task** - what it should do, or what's wrong with it.
+
+After that task finishes, it doesn't exit - it keeps prompting for a
+**Next instruction**, applied to the same file(s), in the same
+conversation. This isn't a fresh, context-free run each time - `contents`
+(the full turn history) is threaded from one call into the next, so a
+follow-up like "also add a test for the empty-string case" lands on top
+of what it already wrote, and it re-verifies with `run_python` the same
+way as the first task. Blank instruction to quit.
 
 Execution is real (via `subprocess`, confined to `workspace/`, 10s
 timeout, no stdin) - fine for this demo, not a hardened sandbox.
@@ -62,3 +70,8 @@ timeout, no stdin) - fine for this demo, not a hardened sandbox.
   it got it right first try, several means real iteration happened. Worth
   comparing across the above scenarios rather than just reading the final
   answer.
+- **Follow-up instructions:** after the first task lands, add something
+  incremental ("also handle the empty string case", "now make it print
+  PASS/FAIL instead of True/False") and watch the diff - it should only
+  show the new change, not a full rewrite, because the model still has
+  the whole prior conversation as context.

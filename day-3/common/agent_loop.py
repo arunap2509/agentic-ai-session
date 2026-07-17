@@ -84,7 +84,17 @@ def run_tool_loop(
             contents=contents,
             config=types.GenerateContentConfig(tools=[tool], system_instruction=system_instruction),
         )
-        candidate = response.candidates[0].content
+        raw_candidate = response.candidates[0]
+        candidate = raw_candidate.content
+        if candidate is None or candidate.parts is None:
+            raise RuntimeError(
+                f"Model returned no content on step {step_num} "
+                f"(finish_reason={raw_candidate.finish_reason!r}) - this means a safety "
+                "filter blocked the response or it hit the output token limit, not a bug "
+                "in the loop itself. Try rephrasing the task/instruction, or shortening "
+                "what's being sent (a large buggy file, or a long-running follow-up "
+                "conversation, can both push toward the token limit)."
+            )
         contents.append(candidate)
         calls = [p.function_call for p in candidate.parts if p.function_call]
 

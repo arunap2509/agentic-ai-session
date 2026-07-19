@@ -1,6 +1,7 @@
 # Day 4 — Multi-Agent Systems
 
-Two multi-agent projects: `incident-commander/` and `research-pipeline/`.
+Two multi-agent projects (`incident-commander/`, `research-pipeline/`) and
+a RAG retrieval-quality demo (`rag-demo/`).
 
 ## How to run
 
@@ -12,7 +13,8 @@ cp .env.example .env   # paste in your GEMINI_API_KEY
 ```
 
 Then see each project's own README for how to run it and example inputs:
-`incident-commander/README.md`, `research-pipeline/README.md`.
+`incident-commander/README.md`, `research-pipeline/README.md`,
+`rag-demo/README.md`.
 
 ## What each component does
 
@@ -23,6 +25,12 @@ escalates to a human. See `incident-commander/README.md` for details.
 ### `research-pipeline/`
 Researches any question from multiple angles and produces a reconciled,
 fact-checked report. See `research-pipeline/README.md` for details.
+
+### `rag-demo/`
+Four retrieval-quality comparisons: naive vs. metadata-filtered search,
+keyword (BM25) vs. semantic search merged with Reciprocal Rank Fusion,
+bi-encoder vs. cross-encoder reranking, and direct search vs. HyDE on a
+deliberately vague query. See `rag-demo/README.md` for details.
 
 ### `common/` (shared by both projects)
 - `llm.py` — Gemini client setup.

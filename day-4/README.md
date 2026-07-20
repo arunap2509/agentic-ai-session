@@ -27,10 +27,12 @@ Researches any question from multiple angles and produces a reconciled,
 fact-checked report. See `research-pipeline/README.md` for details.
 
 ### `rag-demo/`
-Four retrieval-quality comparisons: naive vs. metadata-filtered search,
-keyword (BM25) vs. semantic search merged with Reciprocal Rank Fusion,
-bi-encoder vs. cross-encoder reranking, and direct search vs. HyDE on a
-deliberately vague query. See `rag-demo/README.md` for details.
+Two fundamentals scripts (TF-IDF and cosine similarity, worked by hand on
+a tiny hand-verifiable corpus) plus four retrieval-quality comparisons:
+naive vs. metadata-filtered search, keyword (BM25) vs. semantic search
+merged with Reciprocal Rank Fusion, bi-encoder vs. cross-encoder
+reranking, and direct search vs. HyDE on a deliberately vague query. See
+`rag-demo/README.md` for details.
 
 ### `common/` (shared by both projects)
 - `llm.py` — Gemini client setup.

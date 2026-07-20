@@ -1,8 +1,12 @@
 # RAG Demo — Retrieval Quality
 
-Four short scripts. The first three share one knowledge base; each makes
-the same point from a different angle: "search and grab the top matches"
-quietly throws away information a real RAG system needs to get right.
+Two fundamentals scripts, then four comparison scripts. The fundamentals
+(`00a`, `00b`) show the actual math behind keyword search and semantic
+search on a tiny, hand-verifiable example — worth running first if the
+audience needs that refresher before the comparisons mean anything. The
+four comparisons (`01`-`04`) share one knowledge base; each makes the same
+point from a different angle: "search and grab the top matches" quietly
+throws away information a real RAG system needs to get right.
 
 `incident-commander/tools/runbook_retrieval.py` already does retrieval —
 keyword overlap over 5 static runbooks, no reasoning loop. This demo is
@@ -25,6 +29,8 @@ cp .env.example .env   # paste in your GEMINI_API_KEY
 
 ```
 cd rag-demo
+python 00a_tfidf_explained.py
+python 00b_cosine_similarity_explained.py
 python 01_naive_vs_metadata.py
 python 02_hybrid_rrf.py
 python 04_hyde.py
@@ -42,6 +48,67 @@ don't have a hosted Gemini equivalent, so it needs a local model:
 pip install -r requirements-crossencoder.txt   # adds sentence-transformers + torch, ~90MB model download on first run
 python 03_biencoder_vs_crossencoder.py
 ```
+
+## `00a_tfidf_explained.py` / `00b_cosine_similarity_explained.py` — the fundamentals
+
+Both scripts run two parts: Part 1 shows how the technique works, Part 2
+shows where it completely breaks. Both use the same 5-doc corpus and the
+same query (`"dog park"`) for Part 1 — five one-line sentences about
+cats, dogs, and a park, deliberately simple enough to check the numbers
+by hand. Every failure case below is a real, measured result, not a
+staged one — several other failure hypotheses (exact numeric IDs,
+negation, coincidental keyword traps, numeric-threshold reasoning) were
+tried first and this strong an embedding model held up fine on all of
+them; the two failures kept here are the ones that actually reproduce.
+
+**`00a` Part 1 (TF-IDF)** ranks purely on literal token overlap: a doc has
+to contain the exact string "dog" to get credit for "dog." It prints
+tokens, the full TF table, and the full IDF table sorted low-to-high,
+which surfaces something worth calling out live: "the" appears in every
+single document (more than any other word) but contributes exactly `0` to
+every score, because `idf(the) = log(N/df) = log(5/5) = 0`. No stopword
+list was used — the math alone suppresses it, which is the actual point
+of IDF.
+
+**`00a` Part 2** — a different 5-doc corpus: two documents are genuinely
+about a dog in a park but share *zero* literal tokens with the query
+("canine ... green space", "puppy ... meadow" instead of "dog"/"park"),
+one document is about a park bench and has nothing to do with dogs but
+happens to contain the literal word "park", and two are unrelated cat
+documents. Result: the irrelevant park-bench doc wins outright, while
+both genuinely relevant documents score *exactly* `0.0000` — tied
+precisely with the irrelevant cat documents. TF-IDF can't express
+"probably relevant, worded differently"; a term either appears verbatim
+or contributes nothing at all.
+
+**`00b` Part 1 (cosine similarity)** embeds the same query and documents
+with Gemini and ranks by meaning instead of literal tokens — it would
+still work if a document said "puppy" instead of "dog." It also explains
+why the vectors are 3072-dimensional (the native output size of
+`gemini-embedding-001`, trained with Matryoshka Representation Learning
+so it can also be truncated to 768/1536 if you need smaller vectors) and
+why the table only prints the final cosine similarity rather than the
+dot product and both norms separately — Gemini's embeddings are verified
+unit-length, so `||q|| x ||d|| = 1` and cosine similarity *is* the dot
+product here; printing all three would just be the same number three
+times. Part 1 lands on the same top-2 ranking as `00a`'s Part 1, worth
+pointing out: they agree here because the literal words *and* the
+meaning point the same way; `02_hybrid_rrf.py` is where you see them
+disagree.
+
+**`00b` Part 2** reuses the exact same 5 docs from Part 1, but asks a
+question none of them can answer at all ("What is the capital of
+France?"). The top "match" still comes back with a similarity score
+(`0.5678`) that sits only `0.0163` below Part 1's *least*-relevant
+result (`0.5841`) — a totally unrelated question and a weakly-relevant
+real document land almost on top of each other, a gap roughly 9x smaller
+than Part 1's own best-to-worst spread. Cosine similarity always returns
+a fully ranked list — every vector has *some* angle to every other
+vector — so it structurally cannot say "no good match exists," only
+"here's my best guess," with the same apparent confidence either way.
+TF-IDF, for all its faults, gets this one for free: an off-topic query
+against that corpus scores every document exactly `0`, an honest
+"nothing matched."
 
 ## `01_naive_vs_metadata.py` — does metadata filtering improve retrieval?
 
@@ -87,12 +154,15 @@ Same 8-doc corpus, two queries chosen to each favor a different retriever:
 - **Query A** names an exact config key (`SESSION_TTL_SECONDS`) that
   appears verbatim in exactly one doc. BM25's home turf — both BM25 and
   semantic search agree, #1 in both, RRF just confirms it.
-- **Query B** paraphrases everything ("billing service" instead of
-  payment-service, "dying from running out of memory" instead of
-  OOMKilled, "bounce" instead of restart). BM25 has almost no literal
-  token overlap with the right doc and ranks a different service's
-  runbook first; semantic search reads through the paraphrase and gets it
-  in one.
+- **Query B** paraphrases the *identifying* terms ("billing service"
+  instead of payment-service, "bounce" instead of restart) but still
+  shares generic ops vocabulary ("pods", "memory", "service") with every
+  OOM runbook in the corpus. That vocabulary is too generic to
+  discriminate between the 5 candidate docs, so BM25 scores all 5 within a
+  tight band and which one comes out on top is mostly
+  length-normalization noise, not relevance — it happens to rank a
+  different service's runbook first. Semantic search separates the 5 on
+  meaning instead and gets it in one.
 
 RRF merges the two rankings by **rank position**, not raw score — BM25
 scores and cosine similarities live on different scales, so
@@ -152,6 +222,11 @@ a canned "before/after" pair.
 
 ## Files
 
+- `00a_tfidf_explained.py` — standalone, no `retrieval.py` dependency;
+  its own tiny 5-sentence corpus, TF-IDF implemented inline for
+  readability.
+- `00b_cosine_similarity_explained.py` — same tiny corpus, uses
+  `retrieval.py`'s `embed()` for real Gemini embeddings.
 - `knowledge_base/*.md` — 8 docs, each with a small frontmatter header
   (`service`, `doc_type`, `env`) used as retrieval metadata (used by
   01, 02, 04).

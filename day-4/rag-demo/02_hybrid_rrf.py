@@ -7,10 +7,14 @@ Two queries, chosen to each favor a different retriever:
   Query A names an exact config key (`SESSION_TTL_SECONDS`) that appears
   verbatim in exactly one doc -- BM25's home turf, exact-token overlap.
 
-  Query B paraphrases everything ("billing service" for payment-service,
-  "dying from running out of memory" for OOMKilled, "bounce" for restart)
-  -- BM25 has near-zero token overlap with the right doc and ranks the
-  wrong service first; semantic search reads through the paraphrase fine.
+  Query B paraphrases the identifying details ("billing service" for
+  payment-service, "bounce" for restart) but still shares generic ops
+  vocabulary with every OOM runbook ("pods", "memory", "service") -- that
+  vocabulary is too generic to discriminate between the 5 candidate docs,
+  so BM25 ranks them within a tight band and which one lands on top comes
+  down to length-normalization noise, not relevance. It happens to rank
+  the wrong service first. Semantic search reads through the paraphrase
+  and separates the 5 candidates on meaning instead.
 
 RRF doesn't know in advance which kind of query it's getting. The point of
 this demo is that it doesn't have to: merging by rank position lets
@@ -42,7 +46,7 @@ QUERIES = [
         "highlight": "checkout-service-oom",
     },
     {
-        "label": "Query B -- paraphrased, no shared vocabulary",
+        "label": "Query B -- identifying terms paraphrased away",
         "text": (
             "Our billing service pods keep dying from running out of memory, "
             "and we're not sure if we're allowed to just bounce them without "
@@ -125,11 +129,17 @@ if __name__ == "__main__":
         "exact config key is both a strong keyword match and semantically "
         "central to the doc -- RRF just confirms it.\n\n"
         "Query B: BM25 ranks the correct doc second, behind a wrong service's "
-        "runbook, because almost none of the paraphrased words appear in it "
-        "verbatim. Semantic search gets it in one because it reads 'billing "
-        "service' and 'dying from running out of memory' as payment-service "
-        "+ OOMKilled. RRF, which "
-        "only sees rank positions and never knows which retriever is right in "
-        "advance, still lands the correct doc at the top -- because it only "
-        "needed one of the two signals to be confident."
+        "runbook -- not because there's no lexical overlap, but because the "
+        "only overlap is generic ops vocabulary ('pods', 'memory', 'service') "
+        "that all 5 OOM runbooks share almost identically. That's too "
+        "generic to discriminate between them, so BM25 scores all 5 within "
+        "a tight band (1.41-1.69) and which one lands on top is mostly "
+        "length-normalization noise, not relevance. Semantic search "
+        "separates them on meaning instead -- it reads 'billing service' "
+        "and 'dying from running out of memory' as payment-service + "
+        "OOMKilled specifically, not just 'some service, some memory "
+        "issue'. RRF, which only sees rank positions and never knows which "
+        "retriever is right in advance, still lands the correct doc at the "
+        "top -- because it only needed one of the two signals to be "
+        "confident."
     )

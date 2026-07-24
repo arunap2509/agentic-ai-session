@@ -6,3 +6,9 @@ __pycache__/
 day-3/data/orders.db
 day-3/coding-agent/workspace/
 day-4/*/runs/
+day-5/self-evolving-agent/tools/*.py
+!day-5/self-evolving-agent/tools/__init__.py
+day-5/self-evolving-agent/scratch/
+day-5/tiny-llm/checkpoints/
+day-5/tiny-llm/data/
+day-5/tiny-llm/train_run.log

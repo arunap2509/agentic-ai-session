@@ -83,3 +83,5 @@ installs, with no retraining needed.
   needs its own loop - see that project's README).
 
 `tiny-llm/` doesn't use `common/` at all - it doesn't call Gemini.
+
+langfuse -> https://us.cloud.langfuse.com/project/cmrxtyxgv01jlad0jquotebry/traces

@@ -1,6 +1,6 @@
 # Day 5 — Self-Evolving Agents, Prompt Caching, Agent Evals, a Tiny LLM & LangChain/Langfuse
 
-Five independent, small projects, each making one point with real
+Six independent, small projects, each making one point with real
 execution and detailed output rather than a summarized result.
 
 ## How to run
@@ -16,7 +16,7 @@ cp .env.example .env   # GEMINI_API_KEY (same key as earlier days works), plus
 Then see each project's own README for what to run and what to expect:
 `self-evolving-agent/README.md`, `prompt-caching/README.md`,
 `agent-evals/README.md`, `tiny-llm/README.md`,
-`langchain-agent-evals/README.md`.
+`langchain-agent-evals/README.md`, `langchain-chat-agent/README.md`.
 
 ## What each component does
 
@@ -54,6 +54,14 @@ call and tool call traced to Langfuse instead of only ever existing as a
 console transcript. Built to compare directly against `agent-evals/`: same
 fixture data, same tasks, same fixed `TODAY`, same pass/fail logic - the
 only variable is the framework and the added observability layer.
+
+### `langchain-chat-agent/`
+A simple multi-turn conversational agent (3 tools: current time, a safe
+calculator, mocked weather) built to make the tool-calling loop visible
+rather than to prove anything - each turn streams step by step (tool call
+→ result → reply) instead of only showing the final answer, and it
+genuinely remembers earlier turns via LangGraph's `MemorySaver`
+checkpointer. Also traced to Langfuse. The one you actually chat with.
 
 ### `tiny-llm/`
 The odd one out - not an API call to Gemini at all, but a small
